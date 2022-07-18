@@ -1,47 +1,61 @@
 <template>
   <div class="product-list">
     <h2>Products List</h2>
-    <ul>
+    <div v-if="loading">
+      <img src="https://i.imgur.com/JfPpwOA.gif" />
+      <p>Loading products list...</p>
+    </div>
+    <ul v-else>
       <li v-for="product in products" :key="product.id">
         <h4>{{ product.title }}</h4>
-        <p>{{ product.price | currency }}</p>
-        <button :disabled="!product.inventory" @click="addProductToCart(product)">
+        <p><span v-if="product.inventory">In-stock({{ product.inventory}})</span><span v-else>Out of stock.</span></p>
+        <p>Price: {{ product.price | currency }}</p>
+        <button
+          :disabled="!productIsInStock(product)"
+          @click="addProductToCart(product)"
+        >
           Add to cart
         </button>
       </li>
     </ul>
-
   </div>
 </template>
 
 <script>
-// import { mapState, mapActions } from 'vuex'
-
-import shop from '../api/shop'
-import store from '@/store/index'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
-/*
-  computed: mapState({
-    products: state => state.products.all
-  }),
-  methods: mapActions('cart', [
-    'addProductToCart'
-  ]),
-*/
-  computed: {
-    products () {
-      return store.getters.availableProducts
+  data () {
+    return {
+      loading: false,
+      productIndex: 1
     }
   },
-  created () {
-    // this.$store.dispatch('products/getAllProducts')
-    // shop.getProducts(products => {
-    //    this.products = products
-    //  })
-    shop.getProducts(products => {
-      store.commit('setProducts', products)
+
+  computed: {
+    ...mapState('products', {
+      products: state => state.products.items
+    }),
+    ...mapGetters('products', {
+      productIsInStock: 'productIsInStock'
     })
+  },
+  methods: {
+    ...mapActions({
+      fetchProducts: 'products/fetchProducts',
+      addProductToCart: 'cart/addProductToCart'
+    })
+  },
+  created () {
+    this.loading = true
+    this.fetchProducts()
+      .then(() => {
+        this.loading = false
+      })
   }
 }
 </script>
+
+<style scoped>
+
+</style>

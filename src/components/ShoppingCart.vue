@@ -1,37 +1,49 @@
 <template>
   <div class="Shopping-cart">
     <h2>Your Shopping Cart</h2>
-    <p v-show="!products.length">
+
+    <p v-if="!products.length">
       <i>Shopping Cart is empty.</i>
     </p>
-    <ul>
+    <ul v-else>
       <li v-for="product in products" :key="product.id">
         {{ product.title }} - {{ product.price | currency }} x {{ product.quantity }}
       </li>
     </ul>
+
     <p>Total Price: {{ total | currency }}</p>
-    <p><button :disabled="!products.length" @click="checkout(products)">Checkout</button></p>
-    <p v-show="checkoutStatus">Checkout {{ checkoutStatus }}.</p>
+    <p>
+      <button
+        :disabled="!products.length"
+        @click="checkout"
+      >
+        Checkout
+      </button>
+    </p>
+    <p v-if="checkoutStatus">Checkout {{ checkoutStatus }}</p>
   </div>
 </template>
 
 <script>
-import { mapGetters, mapState } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
   computed: {
-    ...mapState({
-      checkoutStatus: state => state.cart.checkoutStatus
-    }),
     ...mapGetters('cart', {
       products: 'cartProducts',
-      total: 'cartTotalPrice'
+      total: 'cartTotal'
+    }),
+    ...mapState('cart', {
+      checkoutStatus: state => state.checkoutStatus
     })
   },
   methods: {
-    checkout (products) {
-      this.$store.dispatch('cart/checkout', products)
-    }
+    ...mapActions('cart', ['checkout'])
+
   }
 }
 </script>
+
+<style scoped>
+
+</style>

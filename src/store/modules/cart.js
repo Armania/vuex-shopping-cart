@@ -1,93 +1,66 @@
-import shop from '../../api/shop'
-
-// initial state
-// shape: [{ id, quantity }]
-const state = () => ({
-  items: [],
-  checkoutStatus: null
-})
-
-// getters
-const getters = {
-  cartProducts: (state, getters, rootState) => {
-    return state.items.map(({ id, quantity }) => {
-      const product = rootState.products.all.find(product => product.id === id)
-      return {
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        quantity
-      }
-    })
-  },
-
-  cartTotalPrice: (state, getters) => {
-    return getters.cartProducts.reduce((total, product) => {
-      return total + product.price * product.quantity
-    }, 0)
-  }
-}
-
-// actions
-const actions = {
-  checkout ({ commit, state }, products) {
-    const savedCartItems = [...state.items]
-    commit('setCheckoutStatus', null)
-    // empty cart
-    commit('setCartItems', { items: [] })
-    shop.buyProducts(
-      products,
-      () => commit('setCheckoutStatus', 'successful'),
-      () => {
-        commit('setCheckoutStatus', 'failed')
-        // rollback to the cart saved before sending the request
-        commit('setCartItems', { items: savedCartItems })
-      }
-    )
-  },
-
-  addProductToCart ({ state, commit }, product) {
-    commit('setCheckoutStatus', null)
-    if (product.inventory > 0) {
-      const cartItem = state.items.find(item => item.id === product.id)
-      if (!cartItem) {
-        commit('pushProductToCart', { id: product.id })
-      } else {
-        commit('incrementItemQuantity', cartItem)
-      }
-      // remove 1 item from stock
-      commit('products/decrementProductInventory', { id: product.id }, { root: true })
-    }
-  }
-}
-
-// mutations
-const mutations = {
-  pushProductToCart (state, { id }) {
-    state.items.push({
-      id,
-      quantity: 1
-    })
-  },
-
-  incrementItemQuantity (state, { id }) {
-    const cartItem = state.items.find(item => item.id === id)
-    cartItem.quantity++
-  },
-
-  setCartItems (state, { items }) {
-    state.items = items
-  },
-
-  setCheckoutStatus (state, status) {
-    state.checkoutStatus = status
-  }
-}
+import shop from '@/api/shop'
 
 export default {
-  namespaced: true,
-  state,
-  getters,
-  actions,
-  mutations
+  namespace: true,
+  state: { // initial state
+    items: [ /* shape: [{ id, quantity }] */ ],
+    checkoutStatus: null
+  },
+  getters: {
+    cartProducts (state, getters, rootState, rootGetters) {
+      return state.items.map(cartItem => {
+        const product = rootState.products.items.find(product => product.id === cartItem.id)
+        return {
+          title: product.title,
+          price: product.price,
+          quantity: cartItem.quantity
+        }
+      })
+    },
+    cartTotal (state, getters) {
+      return getters.cartProducts.reduce((total, product) => total + product.price * product.quantity, 0)
+    }
+  },
+  mutations: {
+    pushProductToCart (state, productId) {
+      state.items.push({
+        id: productId,
+        quantity: 1
+      })
+    },
+    incrementItemQuantity (state, cartItem) {
+      cartItem.quantity++
+    },
+    setCheckoutStatus (state, status) {
+      state.checkoutStatus = status
+    },
+    emptyCart (state) {
+      state.items = []
+    }
+  },
+  actions: {
+    addProductToCart ({ state, getters, commit, rootState, rootGetters }, product) {
+      if (rootGetters['products/productIsInStock'](product)) {
+        const cartItem = state.items.find(item => item.id === product.id)
+        if (!cartItem) {
+          commit('pushProductToCart', product.id)
+        } else {
+          commit('incrementItemQuantity', cartItem)
+        }
+        commit('products/decrementProductInventory', product, {root: true})
+      }
+    },
+    checkout ({state, commit}) {
+      shop.buyProducts(
+        state.items,
+        () => {
+          commit('emptyCart')
+          commit('setCheckoutStatus', 'success')
+        },
+        () => {
+          commit('setCheckoutStatus', 'fail')
+        }
+      )
+    }
+  }
 }

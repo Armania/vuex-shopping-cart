@@ -1,14 +1,15 @@
 <template>
   <div id="app">
-    <h1>Shopping Cart Example</h1>
+    <h1>Vuex Shopping Cart Example</h1>
     <ProductList />
-    <!-- <ShoppingCart /> -->
+    <hr/>
+    <ShoppingCart />
   </div>
 </template>
 
 <script>
-import ProductList from './components/ProductList.vue'
-import ShoppingCart from './components/ShoppingCart.vue'
+import ProductList from './components/ProductList'
+import ShoppingCart from './components/ShoppingCart'
 
 export default {
   name: 'app',
